@@ -1,0 +1,29 @@
+name: Test ComfyUI One-Click Installer
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install Git
+        run: |
+          choco install git -y
+        shell: powershell
+
+      - name: Run installer
+        run: |
+          powershell -ExecutionPolicy Bypass -File installer\install.ps1
+        shell: powershell
+
+      - name: Upload logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-logs
+          path: logs/
