@@ -23,7 +23,7 @@ function Get-RepoNameFromUrl($url) {
     return $parts[$parts.Length - 1]
 }
 
-function Wait-ForUrl($url, $timeoutSeconds = 120) {
+function Wait-ForUrl($url, $timeoutSeconds = 300) {
     $start = Get-Date
     while (((Get-Date) - $start).TotalSeconds -lt $timeoutSeconds) {
         try {
@@ -192,51 +192,41 @@ Set-Location $comfyDir
 $serverUrl = "http://127.0.0.1:8188/"
 $logServer = Join-Path $logDir "comfyui-server.log"
 
-# Start ComfyUI process
-$psi = New-Object System.Diagnostics.ProcessStartInfo
-$psi.FileName = $py
-$psi.Arguments = "main.py --listen 127.0.0.1 --port 8188"
-$psi.WorkingDirectory = $comfyDir
-$psi.RedirectStandardOutput = $true
-$psi.RedirectStandardError = $true
-$psi.UseShellExecute = $false
-$psi.CreateNoWindow = $true
-
-$p = New-Object System.Diagnostics.Process
-$p.StartInfo = $psi
-
 Write-Host "Starting ComfyUI..."
-[void]$p.Start()
+Write-Host "Logging ComfyUI output to: $logServer"
 
-# Stream stdout/stderr to file (background)
-Start-Job -ScriptBlock {
-    param($proc, $outfile)
-    while (-not $proc.HasExited) {
-        try {
-            $o = $proc.StandardOutput.ReadLine()
-            if ($o) { Add-Content -Path $outfile -Value $o }
-        } catch {}
-        try {
-            $e = $proc.StandardError.ReadLine()
-            if ($e) { Add-Content -Path $outfile -Value $e }
-        } catch {}
-        Start-Sleep -Milliseconds 50
-    }
-} -ArgumentList $p, $logServer | Out-Null
+# Start ComfyUI and redirect output directly to file (reliable)
+$comfyProcess = Start-Process `
+    -FilePath $py `
+    -ArgumentList "main.py --listen 127.0.0.1 --port 8188" `
+    -WorkingDirectory $comfyDir `
+    -RedirectStandardOutput $logServer `
+    -RedirectStandardError $logServer `
+    -PassThru `
+    -WindowStyle Hidden
 
 Write-Host "Waiting for ComfyUI at $serverUrl ..."
-$ok = Wait-ForUrl $serverUrl 120
+$ok = Wait-ForUrl $serverUrl 300   # 5 minutes timeout (important)
 
 if (-not $ok) {
-    try { if (-not $p.HasExited) { $p.Kill() } } catch {}
-    throw "Health check FAILED: ComfyUI did not respond on port 8188. See logs/comfyui-server.log"
+    Write-Host ""
+    Write-Host "Health check FAILED. Printing last 80 lines of ComfyUI log:"
+    Write-Host "--------------------------------------------------------"
+
+    if (Test-Path $logServer) {
+        Get-Content $logServer -Tail 80 | ForEach-Object { Write-Host $_ }
+    } else {
+        Write-Host "(No comfyui-server.log created)"
+    }
+
+    try { Stop-Process -Id $comfyProcess.Id -Force } catch {}
+    throw "Health check FAILED: ComfyUI did not respond on port 8188."
 }
 
 Write-Host "Health check PASSED: ComfyUI responded."
 
-# Stop server
 Write-Host "Stopping ComfyUI..."
-try { if (-not $p.HasExited) { $p.Kill() } } catch {}
+try { Stop-Process -Id $comfyProcess.Id -Force } catch {}
 
 Write-Step "DONE"
 Stop-Transcript
