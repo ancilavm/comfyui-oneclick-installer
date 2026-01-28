@@ -3,97 +3,214 @@
 > **⚠️ NVIDIA ONLY:** This installer is designed for **NVIDIA GPUs with CUDA**.  
 > It installs the **CUDA-enabled PyTorch build (cu121)** and is **not intended for AMD GPUs**.
 
-This repository provides a **PowerShell installer** that automatically installs **ComfyUI**, **CUDA PyTorch**, and a curated set of **custom nodes**.
-
-It is intended for Windows users who want a reproducible setup without manually editing `.bat` files each time.
+This repository provides an automated **PowerShell installer** that sets up ComfyUI with CUDA Torch, curated custom nodes, InsightFace, and optional shared external models folder support.
 
 ---
 
-## What this installer does
+## What this installer will do
 
 When you run the installer, it will:
 
 ✅ Clone / update ComfyUI  
-✅ Automatically install **Python** (if missing)  
-✅ Automatically install **Git** (if missing)  
-✅ Create a Python virtual environment (`venv`)  
+✅ Create a Python virtual environment (`venv`) for ComfyUI  
 ✅ Install **PyTorch CUDA build (cu121)**  
 ✅ Install ComfyUI requirements  
-✅ Install custom nodes from a list  
-✅ Install node requirements (if `requirements.txt` exists in the node repo)  
-✅ Run a health check (on real machines) by launching ComfyUI and checking port 8188  
+✅ Install custom nodes listed in `installer/nodes.list`  
+✅ Install node requirements automatically (if node has `requirements.txt`)  
+✅ Install **InsightFace** (prebuilt wheel, no C++ build tools)  
+✅ Ask for an existing Models folder and configure ComfyUI to use it  
+✅ Create helper files:  
+- `run_comfyui.bat` → starts ComfyUI  
+- `update_comfyui.bat` → updates ComfyUI + all custom nodes  
 
 ---
 
-## Repository contents
-
-### Installer script
-- `installer/install.ps1`
-
-### Custom nodes list (editable)
-- `installer/nodes.list`
-
-### Install command helper file
-- `how_to_install.txt` (contains the install command)
-
----
-
-## Default custom nodes included
-
-The installer installs these nodes by default (from `installer/nodes.list`):
-
-- ComfyUI-Manager — https://github.com/Comfy-Org/ComfyUI-Manager
-- rgthree-comfy — https://github.com/rgthree/rgthree-comfy
-- ComfyUI-SeedVR2_VideoUpscaler — https://github.com/numz/ComfyUI-SeedVR2_VideoUpscaler
-- ComfyUI-KJNodes — https://github.com/kijai/ComfyUI-KJNodes
-- ComfyUI-Easy-Use — https://github.com/yolain/ComfyUI-Easy-Use
-- ComfyUI-Impact-Pack — https://github.com/ltdrdata/ComfyUI-Impact-Pack
-- ComfyUI-Inspire-Pack — https://github.com/ltdrdata/ComfyUI-Inspire-Pack
-- ComfyUI-GGUF — https://github.com/city96/ComfyUI-GGUF
-
----
-
-## Requirements
+## Requirements (IMPORTANT)
 
 ### System
 - Windows 10 / Windows 11
 - **NVIDIA GPU required (CUDA)**
 
-### Software (IMPORTANT)
-✅ You do **NOT** need to install Git or Python manually.  
-The installer will automatically install them if missing.
+### Git (Required)
+Git is required because this repo is installed using `git clone`.
 
-### Permissions
-⚠️ For first-time installation (when Git/Python are missing), you must run PowerShell as:
+✅ Install Git first:  
+https://git-scm.com/downloads
 
-✅ **Run as Administrator**
+Verify Git works:
 
-Minimum recommended hardware:
-- 8GB VRAM (more is better)
-- 16GB RAM (32GB recommended)
-- 20–40 GB free disk space (depends on models)
+```bash
+git --version
+```
+
+### Python
+❗ You do **NOT** need to install Python manually.
+
+✅ The installer will automatically install **Python 3.11** if Python is missing.
 
 ---
 
 # Installation Instructions
 
-You can install in two ways:
+## Step 1 — Install Git
+Download and install Git first:  
+https://git-scm.com/downloads
+
+Then restart CMD/PowerShell and confirm:
+
+```bash
+git --version
+```
 
 ---
 
-## Option A — Download ZIP (easiest)
+## Step 2 — Clone this repo
+Open **CMD** and run:
 
-1) Open this repo:
-https://github.com/ancilavm/comfyui-oneclick-installer
+```bash
+git clone https://github.com/ancilavm/comfyui-oneclick-installer.git
+cd comfyui-oneclick-installer
+```
 
-2) Click:
-**Code → Download ZIP**
+---
 
-3) Extract the ZIP
+## Step 3 — Run the installer (PowerShell)
 
-4) Open PowerShell inside the extracted folder
-
-5) Run the installer command:
+From the repo folder, open PowerShell and run:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File installer\install.ps1
+```
+
+---
+
+## During installation (interactive prompts)
+
+The installer will ask you:
+
+### 1) Install InsightFace?
+- Recommended: **YES**
+- InsightFace is used by FaceID / InsightFace-based workflows and nodes
+- Installed using prebuilt `.whl` (no compiling / no C++ build tools)
+
+### 2) Link an existing Models folder?
+If you already have models stored on another drive (example: `D:\AI\Models`), select YES.
+
+Installer will generate:
+
+```
+ComfyUI\extra_model_paths.yaml
+```
+
+So this ComfyUI install can access your existing Models folder.
+
+---
+
+# After Installation
+
+## Start ComfyUI
+Double click:
+
+✅ `run_comfyui.bat`
+
+or manually:
+
+```powershell
+cd ComfyUI
+.\venv\Scripts\python.exe main.py --listen 127.0.0.1 --port 8188
+```
+
+Open in browser:
+
+http://127.0.0.1:8188
+
+---
+
+## Update ComfyUI + Custom Nodes
+Double click:
+
+✅ `update_comfyui.bat`
+
+This updates:
+- ComfyUI (`git pull`)
+- each custom node in `ComfyUI\custom_nodes\` (`git pull`)
+
+---
+
+## Custom Nodes List
+
+Custom nodes installed are defined here:
+
+```
+installer\nodes.list
+```
+
+Rules:
+- One GitHub repo URL per line
+- Empty lines allowed
+- Lines starting with `#` are ignored
+
+---
+
+## Logs
+
+All logs are written to:
+
+```
+logs\
+```
+
+### Installer log
+- `logs\install.log`
+
+### ComfyUI server log
+- `logs\comfyui-server.log`
+
+---
+
+## Troubleshooting
+
+### Git not found
+If you see errors like `git is not recognized`, install Git:
+
+https://git-scm.com/downloads
+
+Restart CMD/PowerShell and run again.
+
+---
+
+### Python installation issues
+If Python was installed but still not detected:
+- restart the PC
+- reopen PowerShell
+- run the installer again
+
+---
+
+### Health check failed / Port 8188 not responding
+Run ComfyUI manually to see the full error output:
+
+```powershell
+cd ComfyUI
+.\venv\Scripts\python.exe main.py --listen 127.0.0.1 --port 8188
+```
+
+---
+
+### External Models folder gives "Access denied"
+Choose a folder that your Windows account can access (example: `D:\AI\Models`).
+Avoid protected system folders.
+
+---
+
+## Notes
+
+- This installer is designed for **NVIDIA CUDA environments only**
+- Models are **NOT downloaded automatically**
+- You must place models inside your Models folder or ComfyUI models folder
+
+---
+
+## Disclaimer
+This installer downloads and installs Python packages and Git repositories automatically.  
+Use at your own risk.
