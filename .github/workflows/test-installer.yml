@@ -13,13 +13,16 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Git
-        run: |
-          choco install git -y
+        run: choco install git -y
         shell: powershell
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
       - name: Run installer
-        run: |
-          powershell -ExecutionPolicy Bypass -File installer\install.ps1
+        run: powershell -ExecutionPolicy Bypass -File installer\install.ps1
         shell: powershell
 
       - name: Upload logs
