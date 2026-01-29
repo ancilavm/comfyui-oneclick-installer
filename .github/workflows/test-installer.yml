@@ -1,4 +1,4 @@
-name: Test ComfyNvidia
+name: Test Installer (CI)
 
 on:
   push:
@@ -12,26 +12,23 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Install Git + Python
-        run: |
-          choco install git python -y
-        shell: powershell
-
-      - name: Verify tools
-        run: |
-          git --version
-          python --version
-        shell: powershell
-
-      - name: Run installer (CI mode)
-        env:
-          CI_MODE: "1"
-        run: |
-          powershell -ExecutionPolicy Bypass -File installer\install.ps1
-        shell: powershell
-
-      - name: Upload logs
-        uses: actions/upload-artifact@v4
+      # ✅ Force Python 3.11 in GitHub Actions environment
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
         with:
-          name: installer-logs
-          path: logs/
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Confirm Python version
+        shell: pwsh
+        run: |
+          python --version
+          python -c "import sys; print(sys.executable)"
+
+      # ✅ Run installer in CI mode
+      - name: Run installer (CI mode)
+        shell: pwsh
+        env:
+          CI: "true"
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File .\installer\install.ps1
